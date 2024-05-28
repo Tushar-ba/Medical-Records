@@ -2,95 +2,114 @@
 pragma solidity ^0.8.0;
 
 contract MedicalRecords {
+    address public owner;
+
     struct Record {
         string name;
+        string sex;
+        uint age;
         string phoneNumber;
-        string email;
-        string allergies;
-        string bloodGroup;
         string previousHistory;
-        string gender;
-        uint timestamp;
+        string email;
+        string ipfsHash; // Hash of the file stored on IPFS
     }
 
     mapping(address => Record) private records;
-    address public owner;
+    mapping(address => bool) private recordExists;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can perform this action");
+        _;
+    }
+
+    event RecordCreated(address indexed patientAddress, string name);
+    event RecordUpdated(address indexed patientAddress, string name);
+    event RecordDeleted(address indexed patientAddress);
 
     constructor() {
         owner = msg.sender;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the owner can call this function");
-        _;
-    }
-
-    function addRecord(
-        address patient,
-        string memory name,
-        string memory phoneNumber,
-        string memory email,
-        string memory allergies,
-        string memory bloodGroup,
-        string memory previousHistory,
-        string memory gender
+    function createRecord(
+        address _patientAddress,
+        string memory _name,
+        string memory _sex,
+        uint _age,
+        string memory _phoneNumber,
+        string memory _previousHistory,
+        string memory _email,
+        string memory _ipfsHash
     ) public onlyOwner {
-        records[patient] = Record(
-            name,
-            phoneNumber,
-            email,
-            allergies,
-            bloodGroup,
-            previousHistory,
-            gender,
-            block.timestamp
-        );
+        require(!recordExists[_patientAddress], "Record already exists for this address");
+
+        records[_patientAddress] = Record({
+            name: _name,
+            sex: _sex,
+            age: _age,
+            phoneNumber: _phoneNumber,
+            previousHistory: _previousHistory,
+            email: _email,
+            ipfsHash: _ipfsHash
+        });
+
+        recordExists[_patientAddress] = true;
+        emit RecordCreated(_patientAddress, _name);
     }
 
     function updateRecord(
-        address patient,
-        string memory name,
-        string memory phoneNumber,
-        string memory email,
-        string memory allergies,
-        string memory bloodGroup,
-        string memory previousHistory,
-        string memory gender
+        address _patientAddress,
+        string memory _name,
+        string memory _sex,
+        uint _age,
+        string memory _phoneNumber,
+        string memory _previousHistory,
+        string memory _email,
+        string memory _ipfsHash
     ) public onlyOwner {
-        require(records[patient].timestamp != 0, "Record does not exist");
-        records[patient] = Record(
-            name,
-            phoneNumber,
-            email,
-            allergies,
-            bloodGroup,
-            previousHistory,
-            gender,
-            block.timestamp
-        );
+        require(recordExists[_patientAddress], "Record does not exist for this address");
+
+        records[_patientAddress] = Record({
+            name: _name,
+            sex: _sex,
+            age: _age,
+            phoneNumber: _phoneNumber,
+            previousHistory: _previousHistory,
+            email: _email,
+            ipfsHash: _ipfsHash
+        });
+
+        emit RecordUpdated(_patientAddress, _name);
     }
 
-    function getRecord(address patient) public view returns (
+    function deleteRecord(address _patientAddress) public onlyOwner {
+        require(recordExists[_patientAddress], "Record does not exist for this address");
+
+        delete records[_patientAddress];
+        recordExists[_patientAddress] = false;
+
+        emit RecordDeleted(_patientAddress);
+    }
+
+    function getRecord(address _patientAddress) public view returns (
         string memory name,
+        string memory sex,
+        uint age,
         string memory phoneNumber,
-        string memory email,
-        string memory allergies,
-        string memory bloodGroup,
         string memory previousHistory,
-        string memory gender,
-        uint timestamp
+        string memory email,
+        string memory ipfsHash
     ) {
-        Record storage record = records[patient];
+        require(recordExists[_patientAddress], "Record does not exist for this address");
+
+        Record storage record = records[_patientAddress];
         return (
             record.name,
+            record.sex,
+            record.age,
             record.phoneNumber,
-            record.email,
-            record.allergies,
-            record.bloodGroup,
             record.previousHistory,
-            record.gender,
-            record.timestamp
+            record.email,
+            record.ipfsHash
         );
     }
 }
-// 0x85c92b6405c0d0d120a4bdd1de40bb7bfbb554c9

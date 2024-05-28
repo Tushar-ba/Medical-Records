@@ -16,7 +16,6 @@ function App() {
         <Route path="/About" element={<About/>}/>
         <Route path="/RecordKeeper" element={<RecordKeeper/>}/>
         <Route path="/Patient" element={<Patient/>}/>
-        
       </Routes>
     </BrowserRouter>
   )

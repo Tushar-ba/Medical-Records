@@ -13,10 +13,10 @@ const NavBar = () => {
   };
 
   return (
-    <>
+    <>   
       <div>
         <div>
-          <div className="hidden md:flex  md:justify-around h-[50px] m-4">
+          <div className= "hidden md:flex  md:justify-around h-[50px] m-4">
             <img src={logo} alt="logo" />
             <ul className="font-test flex gap-20 justify-center items-center">
               <li>

@@ -1,289 +1,371 @@
-import React, { useState } from 'react';
-import { ethers } from 'ethers';
-import NavBar from '../components/NavBar'
+import React, { useState } from "react";
+import axios from "axios";
+import { ethers } from "ethers";
+import { toast, ToastContainer, Bounce } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+import MedicalRecordsABI from "./MedicalRecordsABI.json";
 
-const contractAddress = '0x85c92b6405c0d0d120a4bdd1de40bb7bfbb554c9'; 
-const contractABI = [
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "phoneNumber",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "email",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "allergies",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "bloodGroup",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "previousHistory",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "gender",
-				"type": "string"
-			}
-		],
-		"name": "addRecord",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "phoneNumber",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "email",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "allergies",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "bloodGroup",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "previousHistory",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "gender",
-				"type": "string"
-			}
-		],
-		"name": "updateRecord",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "patient",
-				"type": "address"
-			}
-		],
-		"name": "getRecord",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "phoneNumber",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "email",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "allergies",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "bloodGroup",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "previousHistory",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "gender",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
+const contractAddress = "0x615d4ab4a81353e908d81b6c9132c73d5c4d690a";
+const pinataApiKey = "556ec4841f586f98f036";
+const pinataSecretApiKey = "c2d177c0a9b858e8c2eabcbf17565bc14a31f3200f0aa076bce5d26b1b99dba7";
+
+const MedicalRecords = () => {
+  const [form, setForm] = useState({
+    patientAddress: "",
+    name: "",
+    sex: "",
+    age: "",
+    phoneNumber: "",
+    previousHistory: "",
+    email: "",
+    file: null,
+    ipfsHash: "",
+  });
+
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+  const [retrievedRecord, setRetrievedRecord] = useState(null);
+  const [metamaskAddress, setMetamaskAddress] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [phoneNumberValid, setPhoneNumberValid] = useState(false);
+
+
+  const connectToMetaMask = async () => {
+    if (window.ethereum) {
+      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      await web3Provider.send("eth_requestAccounts", []);
+      const web3Signer = await web3Provider.getSigner();
+      const web3Contract = new ethers.Contract(contractAddress, MedicalRecordsABI, web3Signer);
+      const address = await web3Signer.getAddress();
+      setProvider(web3Provider);
+      setSigner(web3Signer);
+      setContract(web3Contract);
+      setMetamaskAddress(address);
+      setConnected(true);
+    } else {
+      console.error("MetaMask not found");
+    }
+  };
+
+  const handleChange = (e) => {
+	const { name, value, files } = e.target;
+	if (name === "phoneNumber") {
+	  const isValidPhoneNumber = /^\d{10}$/.test(value);
+	  setPhoneNumberValid(isValidPhoneNumber);
 	}
-]
+	if (files) {
+	  setForm({ ...form, file: files[0] });
+	} else {
+	  setForm({ ...form, [name]: value });
+	}
+  };
+  
 
+  const handleUpload = async () => {
+    if (form.file) {
+      const formData = new FormData();
+      formData.append("file", form.file);
 
-const provider = new ethers.BrowserProvider(window.ethereum);
-const signer = await provider.getSigner();
-const address = await signer.getAddress();
-console.log(address)
+      const metadata = JSON.stringify({
+        name: form.file.name,
+        keyvalues: {
+          patientAddress: form.patientAddress,
+          name: form.name,
+          email: form.email,
+        },
+      });
+      formData.append("pinataMetadata", metadata);
 
-const contract = new ethers.Contract(contractAddress, contractABI, signer);
+      try {
+        const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+          maxBodyLength: "Infinity",
+          headers: {
+            "Content-Type": "multipart/form-data",
+            pinata_api_key: pinataApiKey,
+            pinata_secret_api_key: pinataSecretApiKey,
+          },
+        });
+        const ipfsHash = res.data.IpfsHash;
+        setForm({ ...form, ipfsHash });
+        toast.info('File uploaded', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+          transition: Bounce,
+        });
+      } catch (error) {
+        console.error("Error uploading file to Pinata:", error);
+      }
+    }
+  };
 
-function MedicalRecords() {
-    const [name, setName] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [email, setEmail] = useState('');
-    const [allergies, setAllergies] = useState('');
-    const [bloodGroup, setBloodGroup] = useState('');
-    const [previousHistory, setPreviousHistory] = useState('');
-    const [gender, setGender] = useState('');
-    const [address, setAddress] = useState('');
-    const [patientRecord, setPatientRecord] = useState('');
-
-    async function addRecord() {
-        await contract.addRecord(
-            address,
-            name,
-            phoneNumber,
-            email,
-            allergies,
-            bloodGroup,
-            previousHistory,
-            gender
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (contract) {
+      try {
+        const tx = await contract.createRecord(
+          form.patientAddress,
+          form.name,
+          form.sex,
+          form.age,
+          form.phoneNumber,
+          form.previousHistory,
+          form.email,
+          form.ipfsHash
         );
+        await tx.wait();
+        toast.success("Record created successfully", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+          transition: Bounce,
+        });
+      } catch (error) {
+        console.error("Error creating record:", error);
+      }
     }
+  };
 
-    async function updateRecord() {
-        await contract.updateRecord(
-            address,
-            name,
-            phoneNumber,
-            email,
-            allergies,
-            bloodGroup,
-            previousHistory,
-            gender
-        );
+  const handleGetRecord = async (e) => {
+    e.preventDefault();
+    if (contract) {
+      try {
+        const record = await contract.getRecord(form.patientAddress);
+  
+        // Log the value and type of age for debugging
+        console.log("record.age:", record.age);
+        console.log("Type of record.age:", typeof record.age);
+  
+        let ageValue;
+        if (typeof record.age === 'object' && record.age._isBigNumber) {
+          // Handle BigNumber type
+          ageValue = record.age.toNumber();
+        } else {
+          // Handle string or number types
+          ageValue = parseInt(record.age, 10);
+        }
+  
+        setRetrievedRecord({
+          name: record.name,
+          sex: record.sex,
+          age: ageValue, // Ensure age is set correctly based on its type
+          phoneNumber: record.phoneNumber,
+          previousHistory: record.previousHistory,
+          email: record.email,
+          ipfsHash: record.ipfsHash
+        });
+  
+        toast.success("Record retrieved successfully", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+          transition: Bounce,
+        });
+      } catch (error) {
+        console.error("Error retrieving record:", error);
+        toast.error("Error retrieving record", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+          transition: Bounce,
+        });
+      }
     }
+  };
+  
+  
 
-    async function getRecord() {
-        const result = await contract.getRecord(address);
-        setPatientRecord(result);
+  
+  const handleDeleteRecord = async (e) => {
+    e.preventDefault();
+    if (contract) {
+      try {
+        const tx = await contract.deleteRecord(form.patientAddress);
+        await tx.wait();
+        toast.success("Record deleted successfully", {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+          transition: Bounce,
+        });
+        setRetrievedRecord(null);
+      } catch (error) {
+        console.error("Error deleting record:", error);
+      }
     }
+  };
+  
+  
 
-    return (
-		<>
-		<NavBar/>
-		<div className='m-5'>
-			<div className='flex flex-col gap-3 mt-5  '>
-            <h2 className='text-center text-3xl font-bold'> Medical Records</h2>
-				<p className='text-xl'>Enter Patient Details</p>
-                <input type="text" value={address} placeholder='Patient Address' onChange={(e) => setAddress(e.target.value)} className='p-2 rounded-md shadow-md' />
-           
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-				placeholder='Name'
-				className='p-2 rounded-md shadow-md' />
 
-                <input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}placeholder='Phone Number' 
-				className='p-2 rounded-md shadow-md'/>
-        
-           
-                <input type="text" value={email} onChange={(e) => setEmail(e.target.value)}placeholder='E-mail'
-				className='p-2 rounded-md shadow-md ' />
-        
-           
-                <input type="text" value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder='Allergies' 
-				className='p-2 rounded-md shadow-md'/>
-        
-           
-                <input type="text" value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} placeholder='Blood Group'
-				className='p-2 rounded-md shadow-md' />
-        
-           
-                <input type="text" value={previousHistory} onChange={(e) => setPreviousHistory(e.target.value)}placeholder='Previous History' 
-				className='p-2 rounded-md shadow-md'/>
-        
-           
-                <input type="text" value={gender} onChange={(e) => setGender(e.target.value)} placeholder='Gender'
-				className='p-2 rounded-md shadow-md'/>
-        
-			<div className='flex justify-around mt-5'>
-				<button onClick={addRecord} className='bg-[#BEADFA] w-[150px] p-2 rounded-md font-semibold hover:bg-[#DFCCFB] shadow-md'>Add Record</button>
-            	<button onClick={updateRecord} className='bg-[#BEADFA] w-[150px] p-2 rounded-md font-semibold hover:bg-[#DFCCFB] shadow-md'>Update Record</button>
-            	<button onClick={getRecord} className='bg-[#BEADFA] w-[150px] p-2 rounded-md font-semibold hover:bg-[#DFCCFB] shadow-md'>Get Record</button>
-			</div>
-            
-            <div className='mt-5'>
-                <h3 className='text-xl font-semibold text-center mb-1'>Patient Record</h3>
-				<div className='flex gap-3 flex-col bg-white p-3 rounded-xl shadow-md'>
-				<p>Name: {patientRecord.name}</p>
-                <p>Phone Number: {patientRecord.phoneNumber}</p>
-                <p>Email: {patientRecord.email}</p>
-                <p>Allergies: {patientRecord.allergies}</p>
-                <p>Blood Group: {patientRecord.bloodGroup}</p>
-                <p>Previous History: {patientRecord.previousHistory}</p>
-                <p>Gender: {patientRecord.gender}</p>
-                <p>Timestamp: {patientRecord.timestamp}</p>
-				</div>
-            </div>
+  return (
+    <div>
+      <button
+        onClick={connectToMetaMask}
+        className="bg-[#BEADFA] p-2 rounded-xl font-semibold text-xl w-[200px] font-sans truncate hover:bg-[#DFCCFB] m-[20px]"
+      >
+        {connected ? metamaskAddress : "Connect to MetaMask"}
+      </button>
+      <div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 m-[20px]">
+          <input
+            type="text"
+            name="patientAddress"
+            placeholder="Patient Address"
+            value={form.patientAddress}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={form.name}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input
+            type="text"
+            name="sex"
+            placeholder="Sex"
+            value={form.sex}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input
+            type="number"
+            name="age"
+            placeholder="Age"
+            value={form.age}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input
+			type="text"
+			name="phoneNumber"
+			placeholder="Phone Number"
+			value={form.phoneNumber}
+			onChange={handleChange}
+			required
+			className={`h-[40px] rounded-lg p-3 ${phoneNumberValid ? 'border-green-500' : 'border-red-500'}`}
+			/>
+          <input
+            type="text"
+            name="previousHistory"
+            placeholder="Previous History"
+            value={form.previousHistory}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className="h-[40px] rounded-lg p-3"
+          />
+          <input type="file" onChange={handleChange} required />
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={handleUpload}
+              className="bg-[#BEADFA] p-2 rounded-xl font-semibold text-xl w-[200px] font-sans truncate hover:bg-[#DFCCFB]"
+            >
+              Upload to Pinata
+            </button>
+            <button
+              type="submit"
+              className="bg-[#BEADFA] p-2 rounded-xl font-semibold text-xl w-[200px] font-sans truncate hover:bg-[#DFCCFB]"
+            >
+              Create Record
+            </button>
+          </div>
+        </form>
+      </div>
+      <form onSubmit={handleGetRecord}>
+        <input
+          type="text"
+          name="patientAddress"
+          placeholder="Patient Address"
+          value={form.patientAddress}
+          onChange={handleChange}
+          required
+          className="h-[40px] rounded-lg p-3 ml-[20px]"
+        />
+        <button
+          type="submit"
+          className="bg-[#BEADFA] p-2 rounded-xl font-semibold text-xl w-[200px] font-sans truncate hover:bg-[#DFCCFB] m-[20px]"
+        >
+          Get Record
+        </button>
+		
+
+      </form>
+      {retrievedRecord && (
+        <div className="bg-white m-auto w-[600px] flex flex-col gap-2 p-[20px] rounded-xl">
+            <h3 className="text-2xl font-bold text-center">Retrieved Record</h3>
+            <p><b>Name:</b>   {retrievedRecord.name}</p>
+            <p><b>Sex:</b> {retrievedRecord.sex}</p>
+            <p><b>Age:</b> {retrievedRecord.age}</p>
+            <p><b>Phone Number:</b> {retrievedRecord.phoneNumber}</p>
+            <p><b>Previous History:</b> {retrievedRecord.previousHistory}</p>
+            <p><b>Email:</b> {retrievedRecord.email}</p>
+            <p>
+            <b>IPFS Hash:</b>{" "}
+            <a
+              href={`https://olive-legislative-meerkat-242.mypinata.cloud/ipfs/${retrievedRecord.ipfsHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+             className="bg-[#BEADFA] p-1 rounded-xl font-semibold  font-sans  hover:bg-[#DFCCFB] ">
+              View file
+            </a>
+          </p>
         </div>
-		</div>
-		</>
-        
-    );
-}
+      )}
+      <div>
+		<button
+            onClick={handleDeleteRecord}
+            className="bg-[#BEADFA] p-2 rounded-xl font-semibold text-xl w-[200px] font-sans truncate hover:bg-[#DFCCFB] m-[20px]"
+          >
+            Delete Record
+          </button>
+</div>
+      <ToastContainer />
+    </div>
+  );
+};
 
 export default MedicalRecords;

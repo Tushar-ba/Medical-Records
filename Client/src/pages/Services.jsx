@@ -3,6 +3,7 @@ import NavBar from '../components/NavBar'
 import recordKeeper from "../../Public/recordKeeper.png"
 import user from "../../Public/user-man.png"
 import { Link } from 'react-router-dom'
+import bg from '../../Public/bg.jpg'
 
 const Services = () => {
   return (

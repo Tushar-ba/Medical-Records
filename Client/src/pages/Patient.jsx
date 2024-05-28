@@ -17,7 +17,7 @@ const Patient = () => {
   const [previousHistory, setPreviousHistory] = useState("");
   const [record, setRecord] = useState("");
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState('false');
+  // const [isLoading, setIsLoading] = useState('false');
 
   const ConnectToWallet = async () => {
     try {
@@ -42,7 +42,7 @@ const Patient = () => {
         contractABI,
         signer
       );
-      setIsLoading(false)
+      // setIsLoading(false)
       await contract.createRecord(
         name,
         number,
@@ -50,7 +50,7 @@ const Patient = () => {
         bloodtype,
         previousHistory,
       );
-      setIsLoading(false)
+      // setIsLoading(false)
       // const transationhash = await contract.addToBlockchain();
       // setIsLoading(true);
       //  await transationhash.wait();

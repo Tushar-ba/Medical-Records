@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { ethers } from 'ethers';
 
 
-
 const Button = () => {
     const [connect, setConnect] = useState("Connect");
+
 
     const connectToMetaMask = async () => {
         if (window.ethereum) {
@@ -19,8 +19,12 @@ const Button = () => {
     };
 
     return (
-        <button onClick={connectToMetaMask} className='bg-[#BEADFA] p-2 rounded-2xl  font-semibold text-2xl w-[200px] font-sans truncate hover:bg-[#DFCCFB]'>{`${connect}`}</button>
+        <button onClick={connectToMetaMask} className='bg-[#BEADFA] p-2 rounded-xl  font-semibold text-2xl w-[200px] font-sans truncate hover:bg-[#DFCCFB]'> {`${connect}`}</button>
     );
 };
+
+
+
+
 
 export default Button;
