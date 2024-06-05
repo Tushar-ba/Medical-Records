@@ -5,9 +5,9 @@ import { toast, ToastContainer, Bounce } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import MedicalRecordsABI from "./MedicalRecordsABI.json";
 
-const contractAddress = "0x615d4ab4a81353e908d81b6c9132c73d5c4d690a";
-const pinataApiKey = "556ec4841f586f98f036";
-const pinataSecretApiKey = "c2d177c0a9b858e8c2eabcbf17565bc14a31f3200f0aa076bce5d26b1b99dba7";
+const contractAddress = "";
+const pinataApiKey = "";
+const pinataSecretApiKey = "";
 
 const MedicalRecords = () => {
   const [form, setForm] = useState({
