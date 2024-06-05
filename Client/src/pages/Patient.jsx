@@ -6,7 +6,7 @@ import { contractABI } from '../utils/patient';
 import {Link} from 'react-router-dom'
 
 
-const contractAddress = '0x4Ec6Aa4118410C092F26154e8a22cc3cCc91c535';
+const contractAddress = '';
 
 
 const Patient = () => {
