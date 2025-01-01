@@ -1,12 +1,14 @@
-require("@nomiclabs/hardhat-ethers");
+require("@nomicfoundation/hardhat-toolbox");
+require('@openzeppelin/hardhat-upgrades');
 module.exports = {
-  solidity: "0.8.19",
-  defaultNetwork: "sepolia",
-  networks: {
-    hardhat: {},
-    sepolia: {
-      url: ,
-      accounts: ,
-    },
-  },
+  solidity: {
+    compilers:[
+      {
+        version:"0.8.28"
+      },
+      {
+        version:"0.8.20",
+      }
+    ]
+  }
 };
