@@ -2,15 +2,14 @@ const hre = require("hardhat");
 
 
 async function main() {
-    const deployer = await ethers.getSigner();
+    const deployer = await ethers.getSigners();
     console.log("Deploying contract with the account:", deployer.address);
 
-    const ContractFactory = await ethers.getContractFactory("MedicalRecordStorage");
+    const ContractFactory = await ethers.getContractFactory("MedicalContract");
     const contract = await ContractFactory.deploy();
-    await contract.deployed();
+    await contract.waitForDeployment();
 
-    const address = contract.address;
-    console.log('Address of this contract:', address);
+    console.log('Address of this contract:', await contract.getAddress());
 }
 
 
@@ -21,5 +20,6 @@ main()
     process.exit(1);
 })
 
+//0x6060e0e53a18EB3E86d9697c81131146Eb6e0Ef9
 
-// 0x4Ec6Aa4118410C092F26154e8a22cc3cCc91c535
+//0xC547E005dE96b55f7C0E6BF69f4953Db95b902B3

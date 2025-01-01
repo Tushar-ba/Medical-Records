@@ -16,7 +16,7 @@ contract MedicalContract is OwnableUpgradeable,AccessControlUpgradeable {
         string previousHistory;
         string bloodType;
     }
-
+    
     mapping(uint256 => Record) private records;
 
     event RecordCreated(uint256 recordId, address recorder);

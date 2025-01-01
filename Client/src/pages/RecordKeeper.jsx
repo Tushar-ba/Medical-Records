@@ -1,26 +1,29 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import axios from "axios";
 import { ethers } from "ethers";
 import { toast, ToastContainer, Bounce } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-import MedicalRecordsABI from "./MedicalRecordsABI.json";
+import {contractABI} from "../utils/Recordkeeper.js";
 
-const contractAddress = "";
-const pinataApiKey = "";
-const pinataSecretApiKey = "";
+const contractAddress = "0x6060e0e53a18EB3E86d9697c81131146Eb6e0Ef9";
+const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
+const pinataSecretApiKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+
+console.log("Pinata API Key:", pinataApiKey);
+console.log("Pinata Secret API Key:", pinataSecretApiKey);
 
 const MedicalRecords = () => {
   const [form, setForm] = useState({
-    patientAddress: "",
     name: "",
-    sex: "",
-    age: "",
-    phoneNumber: "",
-    previousHistory: "",
-    email: "",
     file: null,
     ipfsHash: "",
+    phoneNumber: "",
+    age: "",
+    sex: "",
+    previousHistory: "",
+    bloodType: "",
   });
+  console.log(form)
 
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
@@ -36,7 +39,7 @@ const MedicalRecords = () => {
       const web3Provider = new ethers.BrowserProvider(window.ethereum);
       await web3Provider.send("eth_requestAccounts", []);
       const web3Signer = await web3Provider.getSigner();
-      const web3Contract = new ethers.Contract(contractAddress, MedicalRecordsABI, web3Signer);
+      const web3Contract = new ethers.Contract(contractAddress, contractABI , web3Signer);
       const address = await web3Signer.getAddress();
       setProvider(web3Provider);
       setSigner(web3Signer);
@@ -70,9 +73,7 @@ const MedicalRecords = () => {
       const metadata = JSON.stringify({
         name: form.file.name,
         keyvalues: {
-          patientAddress: form.patientAddress,
           name: form.name,
-          email: form.email,
         },
       });
       formData.append("pinataMetadata", metadata);
@@ -110,14 +111,12 @@ const MedicalRecords = () => {
     if (contract) {
       try {
         const tx = await contract.createRecord(
-          form.patientAddress,
           form.name,
+          form.ipfsHash,
           form.sex,
           form.age,
           form.phoneNumber,
           form.previousHistory,
-          form.email,
-          form.ipfsHash
         );
         await tx.wait();
         toast.success("Record created successfully", {
