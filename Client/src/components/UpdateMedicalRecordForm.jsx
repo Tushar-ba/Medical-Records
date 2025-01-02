@@ -15,9 +15,10 @@ const UpdateMedicalRecordForm = () => {
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState(true);
-  const [accessAddress, setAccessAddress] = useState('');
+  const [grantAccessAddress, setGrantAccessAddress] = useState('');
+  const [revokeAccessAddress, setRevokeAccessAddress] = useState('');
   const [accessList, setAccessList] = useState([]);
-  const [accessToggle, setAccessToggle] = useState(false);
+  const [pinnedAccessList, setPinnedAccessList] = useState([]);
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -28,6 +29,25 @@ const UpdateMedicalRecordForm = () => {
     };
 
     checkConnection();
+
+    // Load pinned access list from local storage
+    const storedPinnedList = localStorage.getItem('pinnedAccessList');
+    if (storedPinnedList) {
+      setPinnedAccessList(JSON.parse(storedPinnedList));
+    }
+
+    // Add event listener for account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts) => {
+        setIsConnected(accounts.length > 0);
+      });
+    }
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', checkConnection);
+      }
+    };
   }, []);
 
   const handleInputChange = (e) => {
@@ -46,23 +66,17 @@ const UpdateMedicalRecordForm = () => {
     setFile(e.target.files[0]);
   };
 
-  const handleAccessToggle = () => {
-    setAccessToggle(!accessToggle);
-    if (!accessToggle && accessAddress) {
-      handleGrantAccess();
-    } else if (accessToggle && accessAddress) {
-      handleRevokeAccess();
-    }
-  };
-
   const handleGrantAccess = async () => {
-    if (!accessAddress) return;
+    if (!grantAccessAddress) return;
 
     try {
       const { contract } = await connectWallet();
-      await contract.grantAccess(accessAddress);
-      setAccessList([...accessList, accessAddress]);
-      setAccessAddress('');
+      await contract.grantAccess(grantAccessAddress);
+      const newPinnedList = [...pinnedAccessList, grantAccessAddress];
+      setPinnedAccessList(newPinnedList);
+      localStorage.setItem('pinnedAccessList', JSON.stringify(newPinnedList));
+      setAccessList([...accessList, grantAccessAddress]);
+      setGrantAccessAddress('');
       toast.success('Access granted successfully');
     } catch (error) {
       console.error('Error granting access:', error);
@@ -71,13 +85,16 @@ const UpdateMedicalRecordForm = () => {
   };
 
   const handleRevokeAccess = async () => {
-    if (!accessAddress) return;
+    if (!revokeAccessAddress) return;
 
     try {
       const { contract } = await connectWallet();
-      await contract.revokeAccess(accessAddress);
-      setAccessList(accessList.filter(addr => addr !== accessAddress));
-      setAccessAddress('');
+      await contract.revokeAccess(revokeAccessAddress);
+      const newPinnedList = pinnedAccessList.filter(addr => addr !== revokeAccessAddress);
+      setPinnedAccessList(newPinnedList);
+      localStorage.setItem('pinnedAccessList', JSON.stringify(newPinnedList));
+      setAccessList(accessList.filter(addr => addr !== revokeAccessAddress));
+      setRevokeAccessAddress('');
       toast.success('Access revoked successfully');
     } catch (error) {
       console.error('Error revoking access:', error);
@@ -136,9 +153,9 @@ const UpdateMedicalRecordForm = () => {
   };
 
   return (
-    <div className="py-8">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Update Medical Record</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="py-2">
+      <h2 className="text-xl font-bold mb-4 text-center text-gray-800">Update Medical Record</h2>
+      <form className="space-y-4">
         <div>
           <label htmlFor="recordId" className="block text-sm font-medium text-gray-700">Record ID</label>
           <input
@@ -151,7 +168,7 @@ const UpdateMedicalRecordForm = () => {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#BEADFA] focus:ring focus:ring-[#BEADFA] focus:ring-opacity-50"
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
             <input
@@ -181,7 +198,7 @@ const UpdateMedicalRecordForm = () => {
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>
             <select
@@ -234,40 +251,61 @@ const UpdateMedicalRecordForm = () => {
               hover:file:bg-opacity-90"
           />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="accessAddress" className="block text-sm font-medium text-gray-700">Grant/Revoke Access</label>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            <input
-              type="text"
-              id="accessAddress"
-              value={accessAddress}
-              onChange={(e) => setAccessAddress(e.target.value)}
-              placeholder="Enter Ethereum address"
-              className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-[#BEADFA] focus:ring focus:ring-[#BEADFA] focus:ring-opacity-50"
-            />
-            <button
-              type="button"
-              onClick={handleAccessToggle}
-              className={`px-4 py-2 rounded-md text-white font-medium transition-colors duration-200 ${
-                accessToggle ? 'bg-red-500 hover:bg-red-600' : 'bg-[#BEADFA] hover:bg-opacity-90'
-              }`}
-            >
-              {accessToggle ? 'Revoke' : 'Grant'}
-            </button>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="grantAccessAddress" className="block text-sm font-medium text-gray-700">Grant Access</label>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <input
+                type="text"
+                id="grantAccessAddress"
+                value={grantAccessAddress}
+                onChange={(e) => setGrantAccessAddress(e.target.value)}
+                placeholder="Enter Ethereum address"
+                className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-[#BEADFA] focus:ring focus:ring-[#BEADFA] focus:ring-opacity-50"
+              />
+              <button
+                type="button"
+                onClick={handleGrantAccess}
+                className="px-3 py-1.5 rounded-md text-white text-sm font-medium transition-colors duration-200 bg-[#BEADFA] hover:bg-opacity-90"
+              >
+                Grant
+              </button>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="revokeAccessAddress" className="block text-sm font-medium text-gray-700">Revoke Access</label>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <input
+                type="text"
+                id="revokeAccessAddress"
+                value={revokeAccessAddress}
+                onChange={(e) => setRevokeAccessAddress(e.target.value)}
+                placeholder="Enter Ethereum address"
+                className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-[#BEADFA] focus:ring focus:ring-[#BEADFA] focus:ring-opacity-50"
+              />
+              <button
+                type="button"
+                onClick={handleRevokeAccess}
+                className="px-3 py-1.5 rounded-md text-white text-sm font-medium transition-colors duration-200 bg-red-500 hover:bg-red-600"
+              >
+                Revoke
+              </button>
+            </div>
           </div>
         </div>
-        {accessList.length > 0 && (
+        {pinnedAccessList.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Addresses with Access:</h3>
-            <ul className="space-y-1 max-h-40 overflow-y-auto">
-              {accessList.map((addr, index) => (
-                <li key={index} className="text-sm text-gray-600">{addr}</li>
+            <h3 className="text-sm font-medium text-gray-700 mb-1">Addresses with Access:</h3>
+            <ul className="space-y-1 max-h-20 overflow-y-auto text-xs">
+              {pinnedAccessList.map((addr, index) => (
+                <li key={index} className="text-gray-600">{addr}</li>
               ))}
             </ul>
           </div>
         )}
         <button
-          type="submit"
+          type="button"
+          onClick={handleSubmit}
           disabled={loading || !isConnected || !isPhoneValid}
           className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#BEADFA] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#BEADFA] disabled:opacity-50 transition-colors duration-200 ease-in-out transform hover:-translate-y-1 hover:shadow-lg"
         >
